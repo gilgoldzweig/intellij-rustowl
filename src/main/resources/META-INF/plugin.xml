@@ -34,8 +34,25 @@
   <!-- Extension points defined by the plugin.
        Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
   <extensions defaultExtensionNs="com.intellij">
-    <editorFactoryListener implementation="jp.s6n.idea.rustowl.event.CaretMovedListener" />
-    <notificationGroup id="RustOwl" displayType="STICKY_BALLOON" />
-    <platform.lsp.serverSupportProvider implementation="jp.s6n.idea.rustowl.lsp.RustOwlLspServerSupportProvider" />
+<!--    <projectConfigurable instance="jp.s6n.idea.rustowl.configuration.AppSettingsConfigurable" />-->
+
+    <applicationService
+      serviceImplementation="jp.s6n.idea.rustowl.configuration.AppSettingsState"/>
+
+    <applicationConfigurable
+      displayName="RustOwl"
+      id="jp.s6n.idea.rustowl.configuration.AppSettingsConfigurable"
+      instance="jp.s6n.idea.rustowl.configuration.AppSettingsConfigurable"
+      parentId="tools"/>
+
+    <applicationService
+      serviceInterface="jp.s6n.idea.rustowl.highlighting.IRustOwlHighlighter"
+      serviceImplementation="jp.s6n.idea.rustowl.highlighting.RustOwlHighlighter"/>
+
+<!--    <platform.lsp.serverSupportProvider implementation="jp.s6n.idea.rustowl.lsp.RustOwlLspServerSupportProvider"/>-->
+    <editorFactoryListener implementation="jp.s6n.idea.rustowl.event.CaretMovedListener"/>
+    <notificationGroup id="RustOwl" displayType="STICKY_BALLOON"/>
+
+
   </extensions>
 </idea-plugin>

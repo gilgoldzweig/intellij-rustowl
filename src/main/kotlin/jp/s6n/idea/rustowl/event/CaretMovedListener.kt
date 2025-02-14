@@ -1,9 +1,11 @@
 package jp.s6n.idea.rustowl.event
 
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.EditorFactoryEvent
 import com.intellij.openapi.editor.event.EditorFactoryListener
+import jp.s6n.idea.rustowl.highlighting.IRustOwlHighlighter
 import jp.s6n.idea.rustowl.highlighting.RustOwlHighlighter
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -14,6 +16,8 @@ class CaretMovedListener : EditorFactoryListener, CaretListener {
     private val debounceDelay = 2000L;
     private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
     private var scheduledFuture: ScheduledFuture<*>? = null
+
+    private val highlighter = service<IRustOwlHighlighter>()
 
     override fun editorCreated(event: EditorFactoryEvent) {
         event.editor.caretModel.addCaretListener(this)
@@ -30,9 +34,9 @@ class CaretMovedListener : EditorFactoryListener, CaretListener {
         }
 
         scheduledFuture = scheduler.schedule(
-            { RustOwlHighlighter.highlight(event.editor, event.newPosition) },
+            { highlighter.highlight(event.editor, event.newPosition) },
             debounceDelay,
-            TimeUnit.MILLISECONDS,
+            TimeUnit.MILLISECONDS
         )
     }
 }

@@ -49,7 +49,7 @@
       serviceInterface="jp.s6n.idea.rustowl.highlighting.IRustOwlHighlighter"
       serviceImplementation="jp.s6n.idea.rustowl.highlighting.RustOwlHighlighter"/>
 
-<!--    <platform.lsp.serverSupportProvider implementation="jp.s6n.idea.rustowl.lsp.RustOwlLspServerSupportProvider"/>-->
+    <platform.lsp.serverSupportProvider implementation="jp.s6n.idea.rustowl.lsp.RustOwlLspServerSupportProvider"/>
     <editorFactoryListener implementation="jp.s6n.idea.rustowl.event.CaretMovedListener"/>
     <notificationGroup id="RustOwl" displayType="STICKY_BALLOON"/>
 

@@ -1,6 +1,5 @@
 package jp.s6n.idea.rustowl.configuration
 
-
 import com.intellij.icons.AllIcons
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
@@ -8,85 +7,103 @@ import com.intellij.notification.Notifications
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.labels.LinkLabel
-import com.intellij.ui.components.textFieldWithBrowseButton
-import com.intellij.ui.dsl.builder.panel
+import jp.s6n.idea.rustowl.configuration.DecorationType
 import java.awt.*
-import java.awt.event.ActionListener
 import java.io.IOException
 import java.net.URI
-import javax.swing.*
 import com.intellij.ui.dsl.builder.*
-import com.intellij.ui.dsl.builder.Panel
+import javax.swing.*
+
 
 class AppSettingsComponent {
-
-    private val logger = Logger.getInstance(this.javaClass)
-
+    private val logger  = Logger.getInstance(AppSettingsComponent::class.java)
     private val mainPanel: JPanel = JBPanel<JBPanel<*>>(GridBagLayout())
     val cargoOwlspPathField = TextFieldWithBrowseButton()
     private val installButton = JButton("Install")
     private val githubLink = LinkLabel<String>("RustOwl", null)
     private val colorChoosers: MutableMap<DecorationType, JButton> = mutableMapOf()
-    private val isWindows = System.getProperty("os.name").startsWith("Windows")
+    private val colorSettings = mutableMapOf<DecorationType, Color>()
+
+
     private val constraints = GridBagConstraints().apply {
         gridx = 0
         gridy = 0
     }
 
+    val panel = panel {
+        val path = getCargoOwlspPath()
+        group("RustOwl Settings") {
+            row("Cargo-owlsp Path:") {
+                com.intellij.ui.components.textFieldWithBrowseButton(
+                    null,
+                    JTextField(path ?: ""),
+                    FileChooserDescriptorFactory.createSingleFileDescriptor()
+                ) {
+                    it.path
+                }
+            }
+            row {
+                icon(AllIcons.Vcs.Vendors.Github)
+                browserLink("Open RustOwl on GitHub", GITHUB_LINK)
+            }
+            collapsibleGroup("Decoration Colors") {
+                DecorationType.entries.forEach { type ->
+                    row(type.displayText) {
+                        val colorButton = JButton()
+                        colorButton.background = colorSettings.getOrDefault(type, type.defaultColor)
+                        colorButton.addActionListener {
+                            val newColor = JColorChooser.showDialog(null, "Choose color for ${type.displayText}", colorButton.background)
+                            if (newColor != null) {
+                                colorButton.background = newColor
+                                colorSettings[type] = newColor
+                            }
+                        }
+                        cell(colorButton)
+                    }
+                }
+            }
+        }
+        group("Installation") {
+            row {
+                cell(installButton)
+                    .align(Align.FILL)
+                    .applyToComponent {
+                        addActionListener {
+                            installCargoOwlsp()
+                        }
+                    }
+            }
+        }
+    }
+
     init {
 
-        // Label and field for cargo-owlsp path
-        configureBinaryPath()
-
-        // GitHub link
-        configureGithubLink()
-
-        // Install button
-        configureInstallButton()
-
-        configureColorPickers()
+//        // Label and field for cargo-owlsp path
+//        configureBinaryPath()
+//
+//        // GitHub link
+//        configureGithubLink()
+//
+//        // Install button
+//        configureInstallButton()
+//
+//        configureColorPickers()
 
     }
 
     private fun configureBinaryPath() {
-        JBLabel("RustOwl path:")
-        val path = getCargoOwlspPath()
 
-        panel {
-            group("RustOwl Settings") {
-                row("Links") {
-                    text("Learn more: <icon src='AllIcons.Vcs.Vendors.Github'><a href='$GITHUB_LINK'>RustOwl</a>.")
-                }
-
-                group("Binary path") {
-                    row {
-                        label("Executable(cargo-owlsp) path:")
-                        textFieldWithBrowseButton(
-                            null,
-                            JTextField(path ?: ""),
-                            FileChooserDescriptorFactory.createSingleFileDescriptor()
-                        ) {
-                            it.path
-                        }
-                        if (path == null) {
-                            button("Install ")
-                        }
-                    }
-                }
-
-                collapsibleGroup("Decoration Colors") {
-
-                }
-
-            }
-            row {
-                label("Rust Owl")
-            }
-
-        }
+        mainPanel.add(JBLabel("RustOwl Path:"), constraints)
+        constraints.gridx = 1
+        cargoOwlspPathField.text = "PATH"
+        mainPanel.add(cargoOwlspPathField, constraints)
+        // Check if cargo-owlsp is in PATH
+        checkCargoOwlspInPath()
     }
 
     private fun configureGithubLink() {
@@ -138,6 +155,32 @@ class AppSettingsComponent {
         }
     }
 
+    private fun checkCargoOwlspInPath() {
+        val command = if (System.getProperty("os.name").startsWith("Windows")) {
+            "where cargo-owlsp"
+        } else {
+            "which cargo-owlsp"
+        }
+
+        try {
+            val process = ProcessBuilder(command.split(" "))
+                .redirectErrorStream(true)
+                .start()
+            val exitCode = process.waitFor()
+            if (exitCode == 0) {
+                val path = process.inputStream.bufferedReader().readLine()
+                cargoOwlspPathField.text = path
+                installButton.isEnabled = false
+            } else {
+                cargoOwlspPathField.text = "Not found"
+                installButton.isEnabled = true
+            }
+        } catch (e: IOException) {
+            cargoOwlspPathField.text = "Error checking PATH"
+            installButton.isEnabled = true
+        }
+    }
+
     private fun getCargoOwlspPath(): String? {
         val command = if (System.getProperty("os.name").startsWith("Windows")) {
             "where cargo-owlsp"
@@ -154,7 +197,7 @@ class AppSettingsComponent {
                 process.inputStream.bufferedReader().readLine()
             } else {
                 logger.error("Failed to get path from input stream")
-              null
+                null
             }
         } catch (e: IOException) {
             logger.error("Failed to get path from input stream", e)
@@ -162,23 +205,12 @@ class AppSettingsComponent {
         }
     }
 
-    private fun Row.installCargoOwlsp() {
-        val text = if (isWindows) {
-            "Manual Install Required"
-        } else {
-            "Install Cargo-owlsp"
-        }
-        button(text) {
-            if (isWindows) {
-
-            }
-        }
-
+    private fun installCargoOwlsp() {
         installButton.isEnabled = false
         installButton.text = "Installing..."
 
         SwingUtilities.invokeLater {
-            if () {
+            if (System.getProperty("os.name").startsWith("Windows")) {
                 Desktop.getDesktop().browse(URI(BUILD_MANUAL_LINK))
                 installButton.text = "Manual Install Required"
             } else {
@@ -187,7 +219,7 @@ class AppSettingsComponent {
                         .redirectErrorStream(true)
                         .start()
                     process.waitFor()
-                    getCargoOwlspPath()
+                    checkCargoOwlspInPath()
                     installButton.text = "Installed Successfully"
                 } catch (e: IOException) {
                     installButton.text = "Installation Failed"
@@ -205,7 +237,7 @@ class AppSettingsComponent {
         }
     }
 
-    fun getPanel(): JPanel = mainPanel
+    fun getPanel(): JPanel = panel
 
     fun getPreferredFocusedComponent() = cargoOwlspPathField
 

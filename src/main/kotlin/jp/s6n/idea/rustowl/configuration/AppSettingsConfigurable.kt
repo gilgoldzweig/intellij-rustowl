@@ -12,25 +12,29 @@ class AppSettingsConfigurable : Configurable {
 
     override fun createComponent(): JComponent {
         settingsComponent = AppSettingsComponent()
-        return settingsComponent!!.getPanel()
+        return settingsComponent!!.panel
     }
 
     override fun isModified(): Boolean {
-        val state = AppSettingsState.getInstance()
-        return state.cargoOwlspPath != settingsComponent?.cargoOwlspPathField?.text ||
-            state.colors != settingsComponent?.getColors()
+        val component = settingsComponent
+        val state = RustOwlSettings.getInstance().state
+
+        return state.cargoOwlspPath != component?.cargoOwlspPathField?.text ||
+            state.colors != component?.state?.colors
     }
 
     override fun apply() {
-        val state = AppSettingsState.getInstance()
-        state.cargoOwlspPath = settingsComponent?.cargoOwlspPathField?.text ?: "PATH"
-        state.colors = settingsComponent?.getColors() ?: mutableMapOf()
+        val component = settingsComponent?.state
+        val state = RustOwlSettings.getInstance().state
+        state.cargoOwlspPath = component?.cargoOwlspPath ?: ""
+        state.colors = component?.colors ?: mutableMapOf()
     }
 
     override fun reset() {
-        val state = AppSettingsState.getInstance()
-        settingsComponent?.cargoOwlspPathField?.text = state.cargoOwlspPath
-        settingsComponent?.setColors(state.colors)
+        val component = settingsComponent?.state
+        val state = RustOwlSettings.getInstance().state
+        component?.cargoOwlspPath = state.cargoOwlspPath ?: ""
+        component?.colors = state.colors
     }
 
     override fun disposeUIResources() {

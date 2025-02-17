@@ -1,6 +1,7 @@
 package jp.s6n.idea.rustowl.highlighting
 
 import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
@@ -8,7 +9,7 @@ import com.intellij.openapi.editor.markup.*
 import com.intellij.platform.lsp.api.LspServer
 import com.intellij.platform.lsp.api.LspServerManager
 import com.jetbrains.Service
-import jp.s6n.idea.rustowl.configuration.AppSettingsState
+import jp.s6n.idea.rustowl.configuration.RustOwlSettings
 import jp.s6n.idea.rustowl.configuration.DecorationType
 import jp.s6n.idea.rustowl.lsp.*
 import kotlinx.coroutines.CoroutineScope
@@ -23,9 +24,13 @@ class RustOwlHighlighter(
     private val scope: CoroutineScope
 ) : IRustOwlHighlighter {
     private val logger = Logger.getInstance(this.javaClass)
-    private val decorationsColorMap = AppSettingsState.getInstance().colors
+    private val projectSettings = RustOwlSettings.getInstance()
 
     private var lastHighlighters: MutableList<RangeHighlighter> = mutableListOf()
+
+    init {
+        logger.info("Found path: ${PathManager.findBinFile("cargo-owlsp")}")
+    }
 
     override fun highlight(editor: Editor, position: LogicalPosition) {
         logger.debug("Highlighting lifetimes at $position")
@@ -73,11 +78,12 @@ class RustOwlHighlighter(
     private fun Editor.applyHighlight(response: RustOwlCursorResponse) {
         for (decoration in response.decorations) {
             val decorationType = DecorationType.fromString(decoration.type) ?: continue
-            val color = decorationsColorMap[decorationType] ?: decorationType.defaultColor
+            val color = projectSettings.getColor(decorationType)
             val range = decoration.range
             val textAttributes = TextAttributes().apply {
                 withAdditionalEffect(EffectType.BOLD_LINE_UNDERSCORE, color)
             }
+
 
             val highlighter = markupModel.addRangeHighlighter(
                 range.start.toOffset(this),
